@@ -28,9 +28,9 @@ def get_embedding(text: str, text_type: str = "doc") -> np.array:
 def connect_to_db():
     conn = psycopg2.connect(
         host="localhost",
-        database="textgpt",
+        database="<db>",
         user="postgres",
-        password="OmegA3452")
+        password="<password>")
     register_vector(conn)
     return conn
 
