@@ -14,8 +14,8 @@ directory = "texts/"
 files = os.listdir(directory)
 for i in files:
     with open(directory + i, 'r', encoding="UTF-8") as f:
-        doc_texts += [[i.split(".")[0], f.read()]]
-docs_embedding = [get_embedding(doc_name[0], text_type="query") for doc_name in doc_texts]
+        doc_texts += [[i, f.read()]]
+docs_embedding = [get_embedding(doc_name[1]) for doc_name in doc_texts]
 
 for i in range(len(docs_embedding)):
     conn = connect_to_db()

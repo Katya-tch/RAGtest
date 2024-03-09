@@ -2,12 +2,17 @@ from langchain.chat_models.gigachat import GigaChat
 from langchain.schema import HumanMessage, SystemMessage, AIMessage
 from embeddings import select_from_db, get_embedding, select_simular_question, connect_to_db
 
+with open("keys/credentials.txt", 'r') as f:
+    credentials = f.read()
 chat = GigaChat(
-    credentials='<MAIN.PY(static to gigachat)>',
+    credentials=credentials,
     verify_ssl_certs=False)
 messages = [SystemMessage(
-    content='Ты виртуальный помощник для поиска информации в тексте. Отвечать на вопрос нужно только на основе'
-            ' предоставленной в нем информации. Если вопрос не относится к теме "Смешариков", не отвечай на него.')]
+    content='Ты отвечаешь на вопросы по мультсериалу "Смешарики". '
+            'Отвечать на вопрос в тегах question нужно только на основе'
+            ' предоставленного документа в тегах info. Если в документе '
+            'ответа на вопрос нет, напиши "Данной информации нет в базе.". '
+            'Если вопрос не относится к Смешарикам, напиши "Я не специалист в этой теме.".')]
 last_question = ""
 while True:
     user_input = input("User: ")
@@ -17,20 +22,29 @@ while True:
     if cash:
         print("Base:", cash)
     else:
-        s = select_from_db(query_embedding) + " " + last_question
-        messages.append(HumanMessage(content=' Прочитай текст в '
-             'тегах info и ответь на вопрос в тегах question не более 20 словами. Для ответа используй информацию только из '
-             'предоставленного текста в тегах question. Если ответа нет в тексте, не бери его из других источников. '
-             '[info]' + s + '[/info][question]' + user_input +
-             '[/question]'))
-        res = chat.invoke(input=messages)
-        messages.append(res)
-        # Ответ модели
-        print("Bot: ", res.content)
+        i = 1
+        ans = ""
+        while i <= 3:
+            s = select_from_db(query_embedding, i)
+            # print(s)
+            messages.append(HumanMessage(content='[info]' + s + '[/info][question]' + user_input +
+                                                 '[/question]'))
+            res = chat.invoke(input=messages)
+            messages.append(res)
+            # Ответ модели
+            ans = res.content
+            if "Данной информации нет в базе." in res.content:
+                i += 1
+            else:
+                i = 4
+                break
+
+        print("Bot: ", ans)
 
         conn = connect_to_db()
         cur = conn.cursor()
-        cur.execute("INSERT INTO cash (question, anwser, embedding) VALUES (%s, %s, %s);", (user_input, res.content, query_embedding))
+        cur.execute("INSERT INTO cash (question, anwser, embedding) VALUES (%s, %s, %s);",
+                    (user_input, ans, query_embedding))
         conn.commit()
         cur.close()
     last_question = user_input
