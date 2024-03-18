@@ -39,7 +39,7 @@ while True:
                         "предоставленного документа в тегах info. Отвечай на вопросы очень кратко."
             }, prompt["messages"][-2], prompt["messages"][-1]
         ]
-    print(prompt["messages"])
+    # print(prompt["messages"])
 
     user_input = input("User: ")
     query_embedding = get_embedding(user_input, text_type="query")
@@ -61,7 +61,7 @@ while True:
             response = requests.post(url, headers=headers, json=prompt)
             result = response.json()["result"]["alternatives"][0]["message"]["text"]
             result += f" ({response.json()['result']['usage']['totalTokens']})"
-            if "Данной информации нет в базе." in result:  # пока что хз как определить это, так что отвечает по 1 разу
+            if "КОШКА" in result:  # пока что хз как определить это, так что отвечает по 1 разу
                 i += 1  # он меня просто не слушается(((( говорит совсем не то что просят и невпопад
                 prompt["messages"] = prompt["messages"][:-1]
             else:
