@@ -1,50 +1,77 @@
-from langchain.chat_models.gigachat import GigaChat
-from langchain.schema import HumanMessage, SystemMessage, AIMessage
+import requests
 from embeddings import select_from_db, get_embedding, select_simular_question, connect_to_db
 
-with open("keys/credentials.txt", 'r') as f:
-    credentials = f.read()
-chat = GigaChat(
-    credentials=credentials,
-    verify_ssl_certs=False)
-messages = [SystemMessage(
-    content='Ты отвечаешь на вопросы по мультсериалу "Смешарики". '
-            'Отвечать на вопрос в тегах question нужно только на основе'
-            ' предоставленного документа в тегах info. Если в документе '
-            'ответа на вопрос нет, напиши "Данной информации нет в базе.". '
-            'Если вопрос не относится к Смешарикам, напиши "Я не специалист в этой теме.".')]
-last_question = ""
-while True:
-    user_input = input("User: ")
+with open("keys/folder_id.txt", 'r') as f:
+    FOLDER_ID = f.read()
+prompt = {
+    "modelUri": "gpt://" + FOLDER_ID + "/yandexgpt-lite",
+    "completionOptions": {
+        "stream": False,
+        "temperature": 0,  # 0.6 по умолчанию
+        "maxTokens": "2000"  # 2000 было по умолчанию
+    },
+    "messages": [
+        {
+            "role": "system",
+            "text": "Ты ассистент в деканате ТюмГУ и помогаешь студентам разобраться в устройстве университета. "
+                    "Отвечать на вопрос в тегах question нужно только на основе "
+                    "предоставленного документа в тегах info. Отвечай на вопросы очень кратко."
+        }
+    ]
+}
 
+url = "https://llm.api.cloud.yandex.net/foundationModels/v1/completion"
+headers = {
+    "Content-Type": "application/json",
+    "Authorization": "Api-Key AQVN3cH5GrN2moKk3UCsDOjH8zUjeURUUHGm4cPO"
+}
+
+while True:
+    if len(prompt["messages"]) >= 3:
+        prompt["messages"][-2]["text"] = prompt["messages"][-2]["text"].split("[question]")[-1].replace("[/question]", '')
+        prompt["messages"] = [
+            {
+                "role": "system",
+                "text": "Ты ассистент в деканате ТюмГУ и помогаешь студентам разобраться в устройстве университета. "
+                        "Отвечать на вопрос в тегах question нужно ТОЛЬКО на основе "
+                        "предоставленного документа в тегах info. Отвечай на вопросы очень кратко."
+            }, prompt["messages"][-2], prompt["messages"][-1]
+        ]
+    print(prompt["messages"])
+
+    user_input = input("User: ")
     query_embedding = get_embedding(user_input, text_type="query")
     cash = select_simular_question(query_embedding)
     if cash:
         print("Base:", cash)
+        prompt["messages"] += [{"role": "user",
+                               "text": '[question]' + user_input + '[/question]'}]
+        prompt["messages"] += [{"role": "assistant", "text": cash}]
     else:
         i = 1
-        ans = ""
+        result = ""
         while i <= 3:
             s = select_from_db(query_embedding, i)
-            # print(s)
-            messages.append(HumanMessage(content='[info]' + s + '[/info][question]' + user_input +
-                                                 '[/question]'))
-            res = chat.invoke(input=messages)
-            messages.append(res)
-            # Ответ модели
-            ans = res.content
-            if "Данной информации нет в базе." in res.content:
-                i += 1
+            print(s.split(".txt")[0])  # название дока, который передается вместе с вопросом
+            prompt["messages"] += [{"role": "user",
+                                   "text": '[info]' + s + '[/info][question]' + user_input + '[/question]'}]
+
+            response = requests.post(url, headers=headers, json=prompt)
+            result = response.json()["result"]["alternatives"][0]["message"]["text"]
+            result += f" ({response.json()['result']['usage']['totalTokens']})"
+            if "Данной информации нет в базе." in result:  # пока что хз как определить это, так что отвечает по 1 разу
+                i += 1  # он меня просто не слушается(((( говорит совсем не то что просят и невпопад
+                prompt["messages"] = prompt["messages"][:-1]
             else:
                 i = 4
                 break
 
-        print("Bot: ", ans)
-
+        print("Bot: ", result, "\n")
+        prompt["messages"] += [{"role": "assistant", "text": result}]
         conn = connect_to_db()
         cur = conn.cursor()
         cur.execute("INSERT INTO cash (question, anwser, embedding) VALUES (%s, %s, %s);",
-                    (user_input, ans, query_embedding))
+                    (user_input, result, query_embedding))
         conn.commit()
         cur.close()
-    last_question = user_input
+
