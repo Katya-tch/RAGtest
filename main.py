@@ -60,9 +60,11 @@ while True:
 
             response = requests.post(url, headers=headers, json=prompt)
             result = response.json()["result"]["alternatives"][0]["message"]["text"]
+            print(response.json()["result"]["alternatives"][0]["status"])
             result += f" ({response.json()['result']['usage']['totalTokens']})"
-            if "КОШКА" in result:  # пока что хз как определить это, так что отвечает по 1 разу
-                i += 1  # он меня просто не слушается(((( говорит совсем не то что просят и невпопад
+            # написать функцию для перебора всех фраз
+            if "к сожалению" in result.lower() or "простите" in result.lower() or "нет информации" in result.lower():
+                i += 1
                 prompt["messages"] = prompt["messages"][:-1]
             else:
                 i = 4
