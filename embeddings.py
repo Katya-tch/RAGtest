@@ -32,7 +32,7 @@ def connect_to_db():
         password = f.read()
     conn = psycopg2.connect(
         host="localhost",
-        database="<db>",
+        database="textgpt",
         user="postgres",
         password=password)
     register_vector(conn)
