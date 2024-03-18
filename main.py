@@ -21,9 +21,11 @@ prompt = {
 }
 
 url = "https://llm.api.cloud.yandex.net/foundationModels/v1/completion"
+with open("keys/api_key.txt", 'r') as f:
+    API_KEY = f.read()
 headers = {
     "Content-Type": "application/json",
-    "Authorization": "Api-Key AQVN3cH5GrN2moKk3UCsDOjH8zUjeURUUHGm4cPO"
+    "Authorization": f"Api-Key {API_KEY}"
 }
 
 while True:
