@@ -52,6 +52,7 @@ while True:
     else:
         i = 1
         result = ""
+        result_final = ""
         while i <= 3:
             s = select_from_db(query_embedding, i)
             print(s.split(".txt")[0])  # название дока, который передается вместе с вопросом
@@ -62,20 +63,29 @@ while True:
             result = response.json()["result"]["alternatives"][0]["message"]["text"]
             print(response.json()["result"]["alternatives"][0]["status"])
             result += f" ({response.json()['result']['usage']['totalTokens']})"
-            # написать функцию для перебора всех фраз
-            if "к сожалению" in result.lower() or "простите" in result.lower() or "нет информации" in result.lower():
+            # перебор всех фраз
+            f = 0
+            stop_list = []
+            for j in stop_list:
+                if j in result.lower():
+                    f = 1
+                    break
+            if f:
                 i += 1
                 prompt["messages"] = prompt["messages"][:-1]
+                if result_final == "":
+                    result_final = result
             else:
                 i = 4
+                result_final = result
                 break
 
-        print("Bot: ", result, "\n")
-        prompt["messages"] += [{"role": "assistant", "text": result}]
+        print("Bot: ", result_final, "\n")
+        prompt["messages"] += [{"role": "assistant", "text": result_final}]
         conn = connect_to_db()
         cur = conn.cursor()
         cur.execute("INSERT INTO cash (question, anwser, embedding) VALUES (%s, %s, %s);",
-                    (user_input, result, query_embedding))
+                    (user_input, result_final, query_embedding))
         conn.commit()
         cur.close()
 
