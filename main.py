@@ -53,6 +53,7 @@ while True:
         i = 1
         result = ""
         result_final = ""
+        stop_list = ["простите", "к сожалению", "извините", "прошу прощения", "не указан", "невозможно точно", "нельзя точно"]
         while i <= 3:
             s = select_from_db(query_embedding, i)
             print(s.split(".txt")[0])  # название дока, который передается вместе с вопросом
@@ -61,11 +62,10 @@ while True:
 
             response = requests.post(url, headers=headers, json=prompt)
             result = response.json()["result"]["alternatives"][0]["message"]["text"]
-            print(response.json()["result"]["alternatives"][0]["status"])
+            # print(response.json()["result"]["alternatives"][0]["status"])
             result += f" ({response.json()['result']['usage']['totalTokens']})"
             # перебор всех фраз
             f = 0
-            stop_list = []
             for j in stop_list:
                 if j in result.lower():
                     f = 1

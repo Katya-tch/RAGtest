@@ -8,7 +8,7 @@ def get_embedding(text: str, text_type: str = "doc") -> np.array:
     with open("keys/folder_id.txt", 'r') as f:
         FOLDER_ID = f.read()
     with open("keys/iam_token.txt", 'r') as f:
-        IAM_TOKEN = f.read()
+        IAM_TOKEN = f.read().replace("\n", "")
     # позже надо будет скрипт написать, который в файлик каждые 10 ч будет записывать новый токен, но пока вручную
 
     doc_uri = f"emb://{FOLDER_ID}/text-search-doc/latest"
