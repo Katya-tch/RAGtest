@@ -101,7 +101,9 @@ async def message_handler(msg: Message):
 
 
 async def main():
-    bot = Bot(token="6937003260:AAHGuzLIbFKv8FeptGgckUdP5X7aS2JRpOE", parse_mode=ParseMode.MARKDOWN)
+    with open("keys/tg.txt", 'r') as f:
+        TG_KEY = f.read()
+    bot = Bot(token=TG_KEY, parse_mode=ParseMode.MARKDOWN)
     dp = Dispatcher(storage=MemoryStorage())
     dp.include_router(router)
     await bot.delete_webhook(drop_pending_updates=True)
