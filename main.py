@@ -32,6 +32,8 @@ async def start_handler(msg: Message):
 
 @router.message()
 async def message_handler(msg: Message):
+    msg_wait = await msg.answer(r"Обработка запроса\.\.\.")
+    ecr = ['.', ',', "'", '"', '-', '(', ')']
     user_input = msg.text
     query_embedding = get_embedding(user_input, text_type="query")
     cash = select_simular_question(query_embedding)
@@ -52,7 +54,18 @@ async def message_handler(msg: Message):
         ]
     }
     if cash:
-        await msg.answer((cash + " (Base)").replace("**", "_"))
+        cash = cash.split('можно сделать вывод, что ')[-1]
+        cash = cash.split('###')[
+                   0] + f"\n\n_Ответ получен на основе запросов других пользователей: {cash.split('###')[1]}_"
+        cash = cash.replace("Согласно предоставленному документу, ", "")
+        cash = cash.replace("Согласно информации в предоставленном документе, ", "")
+        cash = cash.capitalize()
+        for i in ecr:
+            cash = cash.replace(i, rf"\{i}")
+        cash = cash.replace(r"\\", rf"\{''}").replace("**", "*").replace("*", "__")
+        print(cash)
+        await msg_wait.delete()
+        await msg.answer(cash)
         # prompt["messages"] += [{"role": "user",
         #                         "text": '[question]' + user_input + '[/question]'}]
         # prompt["messages"] += [{"role": "assistant", "text": cash}]
@@ -62,7 +75,6 @@ async def message_handler(msg: Message):
         result_final = ""
         stop_list = ["простите", "к сожалению", "извините", "прошу прощения", "не указан", "невозможно точно",
                      "нельзя точно"]
-        # stop_list = []
         while i <= 3:
             s = select_from_db(query_embedding, i)
             print(s.split(".txt")[0])  # название дока, который передается вместе с вопросом
@@ -72,7 +84,7 @@ async def message_handler(msg: Message):
             response = requests.post(url, headers=headers, json=prompt)
             result = response.json()["result"]["alternatives"][0]["message"]["text"]
             # print(response.json()["result"]["alternatives"][0]["status"])
-            result += f" ({response.json()['result']['usage']['totalTokens']})"
+            # result += f" ({response.json()['result']['usage']['totalTokens']})"
             # перебор всех фраз
             f = 0
             for j in stop_list:
@@ -89,7 +101,17 @@ async def message_handler(msg: Message):
                 result_final = result
                 break
 
-        await msg.answer((result_final + " (Bot)").replace("**", "_"))
+        result_final = result_final.split('можно сделать вывод, что ')[-1]
+        result_final = result_final.replace("Согласно предоставленному документу, ", "")
+        result_final = result_final.replace("Согласно информации в предоставленном документе, ", "")
+        result_final = result_final.capitalize()
+        for i in ecr:
+            result_final = result_final.replace(i, rf"\{i}")
+        result_final = result_final.replace(r"\\", rf"\{''}")
+        result_final = result_final.replace(r"\\", rf"\{''}").replace("**", "*").replace("*", "__")
+        await msg_wait.delete()
+        print(result_final)
+        await msg.answer(result_final + "\n\n_Ответ создан с использованием ИИ в режиме реального времени_")
         # prompt["messages"] += [{"role": "assistant", "text": result_final}]
         conn = connect_to_db()
         cur = conn.cursor()
@@ -103,7 +125,7 @@ async def message_handler(msg: Message):
 async def main():
     with open("keys/tg.txt", 'r') as f:
         TG_KEY = f.read()
-    bot = Bot(token=TG_KEY, parse_mode=ParseMode.MARKDOWN)
+    bot = Bot(token=TG_KEY, parse_mode=ParseMode.MARKDOWN_V2)
     dp = Dispatcher(storage=MemoryStorage())
     dp.include_router(router)
     await bot.delete_webhook(drop_pending_updates=True)

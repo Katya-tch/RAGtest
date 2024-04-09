@@ -74,7 +74,7 @@ def select_simular_question(query_vector):
     s = ""
     for row in results:
         if float(row[2]) < 0.4:
-            s = str(row[1]) + " (" + str(row[0]) + ")\n"
+            s = str(row[1]) + "###" + str(row[0])
         else:
             s = None
 
