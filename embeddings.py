@@ -7,15 +7,17 @@ import psycopg2
 def get_embedding(text: str, text_type: str = "doc") -> np.array:
     with open("keys/folder_id.txt", 'r') as f:
         FOLDER_ID = f.read()
-    with open("keys/iam_token.txt", 'r') as f:
-        IAM_TOKEN = f.read().replace("\n", "")
+    # with open("keys/iam_token.txt", 'r') as f:
+    #     IAM_TOKEN = f.read().replace("\n", "")
+    with open("keys/api_key.txt", 'r') as f:
+        API_KEY = f.read()
     # позже надо будет скрипт написать, который в файлик каждые 10 ч будет записывать новый токен, но пока вручную
 
     doc_uri = f"emb://{FOLDER_ID}/text-search-doc/latest"
     query_uri = f"emb://{FOLDER_ID}/text-search-query/latest"
 
     embed_url = "https://llm.api.cloud.yandex.net:443/foundationModels/v1/textEmbedding"
-    headers = {"Content-Type": "application/json", "Authorization": f"Bearer {IAM_TOKEN}",
+    headers = {"Content-Type": "application/json", "Authorization": f"Api-Key {API_KEY}",
                "x-folder-id": f"{FOLDER_ID}"}
 
     query_data = {
@@ -66,6 +68,7 @@ def select_simular_question(query_vector):
     cur.execute("""
         SELECT question, anwser, embedding <-> %s AS similarity
         FROM cash
+        WHERE mark=1
         ORDER BY similarity ASC
         LIMIT 1;
         """, (query_vector,))

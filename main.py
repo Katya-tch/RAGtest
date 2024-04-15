@@ -4,15 +4,23 @@ import logging
 from aiogram import Bot, Dispatcher
 from aiogram.enums.parse_mode import ParseMode
 from aiogram.fsm.storage.memory import MemoryStorage
+from aiogram.client.default import DefaultBotProperties
 
 from aiogram import types, F, Router
-from aiogram.types import Message
+from aiogram.types import Message, InlineKeyboardButton, InlineKeyboardMarkup
+from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.filters import Command
 
 import requests
 from embeddings import select_from_db, get_embedding, select_simular_question, connect_to_db
 
 router = Router()
+with open("keys/tg.txt", 'r') as f:
+    TG_KEY = f.read()
+bot = Bot(token=TG_KEY, default=DefaultBotProperties(parse_mode=ParseMode.MARKDOWN_V2))
+dp = Dispatcher(storage=MemoryStorage())
+dp.include_router(router)
+
 with open("keys/folder_id.txt", 'r') as f:
     FOLDER_ID = f.read()
 
@@ -24,10 +32,52 @@ headers = {
     "Authorization": f"Api-Key {API_KEY}"
 }
 
+builder = InlineKeyboardBuilder()
+builder.add(InlineKeyboardButton(text="Нормально", callback_data="good")).add(
+    InlineKeyboardButton(text="Плохо...", callback_data="bad"))
+user_data = {}
+
+
+# kb = [InlineKeyboardButton(text="Нормально", callback_data="good"),
+#       InlineKeyboardButton(text="Плохо...", callback_data="bad")]
+#
+#
+# # feedback_kb = InlineKeyboardMarkup().add(kb[0]).add(kb[1]))
+
+async def main():
+    await bot.delete_webhook(drop_pending_updates=True)
+    await dp.start_polling(bot, allowed_updates=dp.resolve_used_update_types())
+
 
 @router.message(Command("start"))
 async def start_handler(msg: Message):
     await msg.answer("Привет! Я помогу тебе разобраться в устройстве ТюмГУ! Просто отправь вопрос")
+
+
+@dp.callback_query(F.data == 'good')
+async def process_callback_buttonGood(callback: types.CallbackQuery):
+    user_value = user_data.get(callback.from_user.id, 0)
+
+    conn = connect_to_db()
+    cur = conn.cursor()
+    cur.execute("INSERT INTO cash (question, anwser, embedding, mark) VALUES (%s, %s, %s, %s);",
+                (user_value[0], user_value[1], user_value[2], 1))
+    conn.commit()
+    cur.close()
+    await callback.message.answer('Спасибо за отзыв\! Можете задать следующий вопрос')
+
+
+@dp.callback_query(F.data == 'bad')
+async def process_callback_buttonBad(callback: types.CallbackQuery):
+    user_value = user_data.get(callback.from_user.id, 0)
+
+    conn = connect_to_db()
+    cur = conn.cursor()
+    cur.execute("INSERT INTO cash (question, anwser, embedding, mark) VALUES (%s, %s, %s, %s);",
+                (user_value[0], user_value[1], user_value[2], 0))
+    conn.commit()
+    cur.close()
+    await callback.message.answer('Спасибо за отзыв, мы учтем ваше мнение\! Можете задать следующий вопрос')
 
 
 @router.message()
@@ -59,7 +109,7 @@ async def message_handler(msg: Message):
                    0] + f"\n\n_Ответ получен на основе запросов других пользователей: {cash.split('###')[1]}_"
         cash = cash.replace("Согласно предоставленному документу, ", "")
         cash = cash.replace("Согласно информации в предоставленном документе, ", "")
-        cash = cash.capitalize()
+        # cash = cash.capitalize()
         for i in ecr:
             cash = cash.replace(i, rf"\{i}")
         cash = cash.replace(r"\\", rf"\{''}").replace("**", "*").replace("*", "__")
@@ -112,24 +162,12 @@ async def message_handler(msg: Message):
         await msg_wait.delete()
         print(result_final)
         await msg.answer(result_final + "\n\n_Ответ создан с использованием ИИ в режиме реального времени_")
+
+        await msg.answer("Пожалуйста, оцените ответ бота\. Если Вы этого не сделаете, то ответ Бота будет утерян раз и навсегда\(\(", reply_markup=builder.as_markup())
         # prompt["messages"] += [{"role": "assistant", "text": result_final}]
-        conn = connect_to_db()
-        cur = conn.cursor()
-        cur.execute("INSERT INTO cash (question, anwser, embedding) VALUES (%s, %s, %s);",
-                    (user_input, result_final, query_embedding))
-        conn.commit()
-        cur.close()
+        user_data[msg.from_user.id] = [user_input, result_final, query_embedding]
+
     # await msg.answer(f"Твой ID: {msg.from_user.id}")
-
-
-async def main():
-    with open("keys/tg.txt", 'r') as f:
-        TG_KEY = f.read()
-    bot = Bot(token=TG_KEY, parse_mode=ParseMode.MARKDOWN_V2)
-    dp = Dispatcher(storage=MemoryStorage())
-    dp.include_router(router)
-    await bot.delete_webhook(drop_pending_updates=True)
-    await dp.start_polling(bot, allowed_updates=dp.resolve_used_update_types())
 
 
 logging.basicConfig(level=logging.INFO)
