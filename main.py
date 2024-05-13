@@ -123,6 +123,7 @@ async def message_handler(msg: Message):
         i = 1
         result = ""
         result_final = ""
+        s_final = ""
         stop_list = ["простите", "к сожалению", "извините", "прошу прощения", "не указан", "невозможно точно",
                      "нельзя точно"]
         while i <= 3:
@@ -146,9 +147,11 @@ async def message_handler(msg: Message):
                 prompt["messages"] = prompt["messages"][:-1]
                 if result_final == "":
                     result_final = result
+                    s_final = s.split(".")[0]
             else:
                 i = 4
                 result_final = result
+                s_final = s.split(".")[0]
                 break
 
         result_final = result_final.split('можно сделать вывод, что ')[-1]
@@ -161,7 +164,8 @@ async def message_handler(msg: Message):
         result_final = result_final.replace(r"\\", rf"\{''}").replace("**", "*").replace("*", "__")
         await msg_wait.delete()
         print(result_final)
-        await msg.answer(result_final + "\n\n_Ответ создан с использованием ИИ в режиме реального времени_")
+        ssilka = "https://github.com/Katya-tch/RAGtest/blob/main/texts/" + s_final
+        await msg.answer(result_final + "\n\n_Ответ создан с использованием ИИ в режиме реального времени_\n\nНа основании документа: " + ssilka)
 
         await msg.answer("Пожалуйста, оцените ответ бота\. Если Вы этого не сделаете, то ответ Бота будет утерян раз и навсегда\(\(", reply_markup=builder.as_markup())
         # prompt["messages"] += [{"role": "assistant", "text": result_final}]
