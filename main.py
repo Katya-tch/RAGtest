@@ -83,7 +83,7 @@ async def process_callback_buttonBad(callback: types.CallbackQuery):
 @router.message()
 async def message_handler(msg: Message):
     msg_wait = await msg.answer(r"Обработка запроса\.\.\.")
-    ecr = ['.', ',', "'", '"', '-', '(', ')']
+    ecr = ['.', ',', "'", '"', '-', '(', ')', '_', "@", '&', "!", '?']
     user_input = msg.text
     query_embedding = get_embedding(user_input, text_type="query")
     cash = select_simular_question(query_embedding)
@@ -164,8 +164,13 @@ async def message_handler(msg: Message):
         result_final = result_final.replace(r"\\", rf"\{''}").replace("**", "*").replace("*", "__")
         await msg_wait.delete()
         print(result_final)
-        ssilka = "https://github.com/Katya-tch/RAGtest/blob/main/texts/" + s_final
-        await msg.answer(result_final + "\n\n_Ответ создан с использованием ИИ в режиме реального времени_\n\nНа основании документа: " + ssilka)
+        ssilka = "https\:\/\/github\.com\/Katya\-tch\/RAGtest\/blob\/main\/texts\/" + s_final + "\.pdf"
+        # ssilka = "пшел нахуй"
+        resres = result_final + "\n\n_Ответ создан с использованием ИИ в режиме реального времени_ На основании документа\: " + ssilka
+        # for i in ecr:
+        #     resres = resres.replace(i, rf"\{i}")
+        print(resres)
+        await msg.answer(resres)
 
         await msg.answer("Пожалуйста, оцените ответ бота\. Если Вы этого не сделаете, то ответ Бота будет утерян раз и навсегда\(\(", reply_markup=builder.as_markup())
         # prompt["messages"] += [{"role": "assistant", "text": result_final}]

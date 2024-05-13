@@ -13,8 +13,9 @@ doc_texts = [
 directory = "texts/"
 files = os.listdir(directory)
 for i in files:
-    with open(directory + i, 'r', encoding="UTF-8") as f:
-        doc_texts += [[i, f.read()]]
+    if "txt" in i:
+        with open(directory + i, 'r', encoding="UTF-8") as f:
+            doc_texts += [[i, f.read()]]
 docs_embedding = [get_embedding(doc_name[0] + " " + doc_name[1]) for doc_name in doc_texts]
 
 for i in range(len(docs_embedding)):
