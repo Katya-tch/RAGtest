@@ -66,7 +66,7 @@ def select_simular_question(query_vector):
     cur = conn.cursor()
 
     cur.execute("""
-        SELECT question, anwser, embedding <-> %s AS similarity
+        SELECT question, anwser, doc, embedding <-> %s AS similarity
         FROM cash
         WHERE mark=1
         ORDER BY similarity ASC
@@ -76,8 +76,8 @@ def select_simular_question(query_vector):
     results = cur.fetchall()
     s = ""
     for row in results:
-        if float(row[2]) < 0.4:
-            s = str(row[1]) + "###" + str(row[0])
+        if float(row[3]) < 0.4:
+            s = str(row[1]) + "###" + str(row[0]) + "###" + str(row[2])
         else:
             s = None
 

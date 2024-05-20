@@ -38,12 +38,6 @@ builder.add(InlineKeyboardButton(text="Нормально", callback_data="good"
 user_data = {}
 
 
-# kb = [InlineKeyboardButton(text="Нормально", callback_data="good"),
-#       InlineKeyboardButton(text="Плохо...", callback_data="bad")]
-#
-#
-# # feedback_kb = InlineKeyboardMarkup().add(kb[0]).add(kb[1]))
-
 async def main():
     await bot.delete_webhook(drop_pending_updates=True)
     await dp.start_polling(bot, allowed_updates=dp.resolve_used_update_types())
@@ -60,8 +54,8 @@ async def process_callback_buttonGood(callback: types.CallbackQuery):
 
     conn = connect_to_db()
     cur = conn.cursor()
-    cur.execute("INSERT INTO cash (question, anwser, embedding, mark) VALUES (%s, %s, %s, %s);",
-                (user_value[0], user_value[1], user_value[2], 1))
+    cur.execute("INSERT INTO cash (question, anwser, embedding, mark, doc) VALUES (%s, %s, %s, %s, %s);",
+                (user_value[0], user_value[1], user_value[2], 1, user_value[3]))
     conn.commit()
     cur.close()
     await callback.message.answer('Спасибо за отзыв\! Можете задать следующий вопрос')
@@ -73,8 +67,8 @@ async def process_callback_buttonBad(callback: types.CallbackQuery):
 
     conn = connect_to_db()
     cur = conn.cursor()
-    cur.execute("INSERT INTO cash (question, anwser, embedding, mark) VALUES (%s, %s, %s, %s);",
-                (user_value[0], user_value[1], user_value[2], 0))
+    cur.execute("INSERT INTO cash (question, anwser, embedding, mark, doc) VALUES (%s, %s, %s, %s, %s);",
+                (user_value[0], user_value[1], user_value[2], 0, user_value[3]))
     conn.commit()
     cur.close()
     await callback.message.answer('Спасибо за отзыв, мы учтем ваше мнение\! Можете задать следующий вопрос')
@@ -83,7 +77,7 @@ async def process_callback_buttonBad(callback: types.CallbackQuery):
 @router.message()
 async def message_handler(msg: Message):
     msg_wait = await msg.answer(r"Обработка запроса\.\.\.")
-    ecr = ['.', ',', "'", '"', '-', '(', ')', '_', "@", '&', "!", '?']
+    ecr = ['.', ',', "'", '"', '-', '(', ')', "@", '&', "!", '?']
     user_input = msg.text
     query_embedding = get_embedding(user_input, text_type="query")
     cash = select_simular_question(query_embedding)
@@ -92,7 +86,7 @@ async def message_handler(msg: Message):
         "completionOptions": {
             "stream": False,
             "temperature": 0,  # 0.6 по умолчанию
-            "maxTokens": "2000"  # 2000 было по умолчанию
+            "maxTokens": "2000"  # 2000 по умолчанию
         },
         "messages": [
             {
@@ -105,23 +99,21 @@ async def message_handler(msg: Message):
     }
     if cash:
         cash = cash.split('можно сделать вывод, что ')[-1]
+        link = cash.split('###')[2]
+        if link == "None":
+            link = "мы обязательно добавим сюда ссылку\.\.\."
         cash = cash.split('###')[
-                   0] + f"\n\n_Ответ получен на основе запросов других пользователей: {cash.split('###')[1]}_"
+                   0] + f"\n\n_Ответ получен на основе запросов других пользователей: {cash.split('###')[1]}_ На основании документа\: " + link
         cash = cash.replace("Согласно предоставленному документу, ", "")
         cash = cash.replace("Согласно информации в предоставленном документе, ", "")
-        # cash = cash.capitalize()
         for i in ecr:
             cash = cash.replace(i, rf"\{i}")
         cash = cash.replace(r"\\", rf"\{''}").replace("**", "*").replace("*", "__")
         print(cash)
         await msg_wait.delete()
         await msg.answer(cash)
-        # prompt["messages"] += [{"role": "user",
-        #                         "text": '[question]' + user_input + '[/question]'}]
-        # prompt["messages"] += [{"role": "assistant", "text": cash}]
     else:
         i = 1
-        result = ""
         result_final = ""
         s_final = ""
         stop_list = ["простите", "к сожалению", "извините", "прошу прощения", "не указан", "невозможно точно",
@@ -134,8 +126,7 @@ async def message_handler(msg: Message):
 
             response = requests.post(url, headers=headers, json=prompt)
             result = response.json()["result"]["alternatives"][0]["message"]["text"]
-            # print(response.json()["result"]["alternatives"][0]["status"])
-            # result += f" ({response.json()['result']['usage']['totalTokens']})"
+
             # перебор всех фраз
             f = 0
             for j in stop_list:
@@ -164,19 +155,16 @@ async def message_handler(msg: Message):
         result_final = result_final.replace(r"\\", rf"\{''}").replace("**", "*").replace("*", "__")
         await msg_wait.delete()
         print(result_final)
-        ssilka = "https\:\/\/github\.com\/Katya\-tch\/RAGtest\/blob\/main\/texts\/" + s_final + "\.pdf"
-        # ssilka = "пшел нахуй"
-        resres = result_final + "\n\n_Ответ создан с использованием ИИ в режиме реального времени_ На основании документа\: " + ssilka
-        # for i in ecr:
-        #     resres = resres.replace(i, rf"\{i}")
+        link = "https\:\/\/github\.com\/Katya\-tch\/RAGtest\/blob\/main\/texts\/" + s_final + "\.pdf"
+        resres = result_final + "\n\n_Ответ создан с использованием ИИ в режиме реального времени_ На основании документа\: " + link
+
         print(resres)
         await msg.answer(resres)
 
-        await msg.answer("Пожалуйста, оцените ответ бота\. Если Вы этого не сделаете, то ответ Бота будет утерян раз и навсегда\(\(", reply_markup=builder.as_markup())
-        # prompt["messages"] += [{"role": "assistant", "text": result_final}]
-        user_data[msg.from_user.id] = [user_input, result_final, query_embedding]
-
-    # await msg.answer(f"Твой ID: {msg.from_user.id}")
+        await msg.answer(
+            "Пожалуйста, оцените ответ бота\. Если Вы этого не сделаете, то ответ Бота будет утерян раз и навсегда\(\(",
+            reply_markup=builder.as_markup())
+        user_data[msg.from_user.id] = [user_input, result_final, query_embedding, link]
 
 
 logging.basicConfig(level=logging.INFO)
