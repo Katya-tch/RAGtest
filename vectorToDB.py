@@ -1,7 +1,7 @@
 # запустить для обновления базы знаний
-from embeddings import get_embedding, connect_to_db
 import os
 
+from embeddings import get_embedding, connect_to_db
 
 doc_texts = [
     # """Александр Сергеевич Пушкин (26 мая [6 июня] 1799, Москва — 29 января [10 февраля] 1837, Санкт-Петербург) — русский поэт, драматург и прозаик, заложивший основы русского реалистического направления, литературный критик и теоретик литературы, историк, публицист, журналист.""",
@@ -23,7 +23,8 @@ for i in range(len(docs_embedding)):
     cur = conn.cursor()
 
     vector_data = docs_embedding[i].tolist()
-    cur.execute("INSERT INTO embeddings (name, content, embedding) VALUES (%s, %s, %s);", (doc_texts[i][0], doc_texts[i][1], vector_data))
+    cur.execute("INSERT INTO embeddings (name, content, embedding) VALUES (%s, %s, %s);",
+                (doc_texts[i][0], doc_texts[i][1], vector_data))
 
     conn.commit()
     cur.close()

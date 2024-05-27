@@ -1,4 +1,5 @@
 import requests
+
 import numpy as np
 from pgvector.psycopg2 import register_vector
 import psycopg2
@@ -11,7 +12,6 @@ def get_embedding(text: str, text_type: str = "doc") -> np.array:
     #     IAM_TOKEN = f.read().replace("\n", "")
     with open("keys/api_key.txt", 'r') as f:
         API_KEY = f.read()
-    # позже надо будет скрипт написать, который в файлик каждые 10 ч будет записывать новый токен, но пока вручную
 
     doc_uri = f"emb://{FOLDER_ID}/text-search-doc/latest"
     query_uri = f"emb://{FOLDER_ID}/text-search-query/latest"

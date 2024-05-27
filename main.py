@@ -1,17 +1,15 @@
+import requests
 import asyncio
 import logging
 
-from aiogram import Bot, Dispatcher
+from aiogram import Bot, Dispatcher, types, F, Router
 from aiogram.enums.parse_mode import ParseMode
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.client.default import DefaultBotProperties
-
-from aiogram import types, F, Router
-from aiogram.types import Message, InlineKeyboardButton, InlineKeyboardMarkup
+from aiogram.types import Message, InlineKeyboardButton
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.filters import Command
 
-import requests
 from embeddings import select_from_db, get_embedding, select_simular_question, connect_to_db
 
 router = Router()
